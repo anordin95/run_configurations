@@ -1,5 +1,24 @@
+if [ -f ~/.dotfiles/git-completion.bash ]; then
+    source ~/.dotfiles/git-completion.bash
+fi
+
+if [ -f ~/.bni/develop.rc ]; then
+  source ~/.bni/develop.rc
+fi
+
+if [ -f ~/.dlrc ]; then
+    source ~/.dlrc
+fi
+
 source environment-variables.bash
 source aliases.bash
+source generate-prompt.bash
+
+# Sections
+# 1. Butterfly work-specifc initialization
+# 2. Homebrew initialization
+# 3. Postgres initialization
+# 4. pyenv initialization
 
 # ==============================================================
 # Butterfly work-specifc initialization
@@ -14,7 +33,7 @@ alias ecr-login='docker login -u AWS -p $(aws ecr get-login-password) https://85
 
 export DL_HOME=~/src/dl-dev
 export EFS_DL_ROOT=/home/anordin/src
-export DL_NB_KERNEL_TIMEOUT_SECONDS=$((3600*6)) 
+export DL_NB_KERNEL_TIMEOUT_SECONDS=$((3600*6))
 export DL_NB_SERVER_TIMEOUT_SECONDS=$((3600*12))
 # Building a pylibmc, python library mem-cached, wheel requires
 # memcached C++ header files. Provide that information here.
@@ -40,6 +59,7 @@ aws_sso_login_if_necessary() {
 # Run in a sub-shell, quietly and in the background to minimize latency overhead of 
 # the call to aws. Also prevent noise from job output & thread control output. 
 (aws_sso_login_if_necessary 1>/dev/null 2>&1 & )
+
 
 # ==============================================================
 # Homebrew initialization
@@ -101,90 +121,8 @@ do
     fi
 done
 
-# Load Git completion
-# Note: $_ means the last argument to the previous command. 
-# so . $_ translates to 'source .git-completion.bash' in this case.
-test -f ~/.dotfiles/git-completion.bash && source $_
-
 # Increase limit of maximum open file handles
 ulimit -n 8192
 
-################################################################################
-# PROMPT GENERATION
-################################################################################
-# Get the current folder's git repo status.
-function parse_git_dirty {
-    STATUS="$(git status 2> /dev/null)"
-    if [[ $? -ne 0 ]]; then printf "-"; return; else printf "["; fi
-    if echo ${STATUS} | grep -c "renamed:"         &> /dev/null; then printf ">"; else printf ""; fi
-    if echo ${STATUS} | grep -c "branch is ahead:" &> /dev/null; then printf "!"; else printf ""; fi
-    if echo ${STATUS} | grep -c "new file::"       &> /dev/null; then printf "+"; else printf ""; fi
-    if echo ${STATUS} | grep -c "Untracked files:" &> /dev/null; then printf "?"; else printf ""; fi
-    if echo ${STATUS} | grep -c "modified:"        &> /dev/null; then printf "*"; else printf ""; fi
-    if echo ${STATUS} | grep -c "deleted:"         &> /dev/null; then printf "-"; else printf ""; fi
-    printf "]"
-}
-
-# Get the current git branch.
-parse_git_branch() {
-    # Long form
-    git rev-parse --abbrev-ref HEAD 2> /dev/null
-    # Short form
-    # git rev-parse --abbrev-ref HEAD 2> /dev/null | sed -e 's/.*\/\(.*\)/\1/'
-}
-
-# PS1 is the environment variable bash displays as the prompt.
-# Whereas PROMPT_COMMAND is an environment variable invoked as a function 
-# immediately prior to the prompt being read from PS1 & displayed. 
-# For example, PROMPT_COMMAND could contain "ddos https://google.com", so
-# the terminal would ddos Google each time your it generates a prompt! 
-generate_bash_prompt() {
-    BLUE='\[\e[38;5;27m\]'
-    CYAN='\[\e[38;5;87m\]'
-    WHITE='\[\e[38;5;231m\]'
-    YELLOW='\[\e[38;5;226m\]'
-    RED='\[\e[38;5;196m\]'
-    RESET='\[\e[0m\]'
-    ORANGE='\[\e[38;5;208m\]'
-    export PS1="${ORANGE}[$(pyenv version-name)]${RESET} ${CYAN}\W${RESET} ${WHITE}\t ${RESET} ${YELLOW}\$(parse_git_branch)${RED}\$(parse_git_dirty)${RESET} \n \$ "
-}
-PROMPT_COMMAND="generate_bash_prompt;${PROMPT_COMMAND}"
 
 
-################################################################################
-# DL-Team Setup
-################################################################################
-# Copied from https://butterflynetwork.atlassian.net/wiki/spaces/SW/pages/2827223523/Development+Environment
-# Note: `` backticks not '' apostrophes have similar behavior as $(), except they do not nest.
-
-source ~/.dlrc
-
-# For now I'm going to leave this commented out since I don't believe it's necessary.
-# OPENSSLPATH=$(brew --prefix openssl@1.1)
-# READLINEPATH=$(brew --prefix readline)
-# XCRUNPATH=$(xcrun --show-sdk-path)
-# export CFLAGS="-I$OPENSSLPATH/include -I$READLINEPATH/include -I$XCRUNPATH/usr/include"
-# export LDFLAGS="-L$OPENSSLPATH/lib -L$READLINEPATH/lib -L$XCRUNPATH/usr/lib -L/usr/local/opt/zlib/lib"
-# export CPPFLAGS="-I/usr/local/opt/zlib/include"
-# export PKG_CONFIG_PATH="/usr/local/opt/zlib/lib/pkgconfig"
-
-################################################################################
-# SOFTWARE REPO SETUP
-################################################################################
-# Include the following lines for use of the software-repo.
-# Environment variables related to pyenv and compiler flags may be over-written.
-# The pyenv installation and some other components required by software conflict with
-# the dl-team's default setup.
-
-# # BEGIN source-develop-rc
-# if [ -f ~/.bni/develop.rc ]; then
-#   source ~/.bni/develop.rc
-# fi
-# # END source-develop-rc
-# # Software direnv setup
-# eval "$(direnv hook bash)"
-# BEGIN source-develop-rc
-if [ -f ~/.bni/develop.rc ]; then
-  source ~/.bni/develop.rc
-fi
-# END source-develop-rc
