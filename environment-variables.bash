@@ -7,3 +7,7 @@ export PAGER='less --chop-long-lines -N'
 
 # Default to vim
 export EDITOR=vim
+
+# Bash defaults to storing the most recent 500 commands. Increase that.
+export HISTFILESIZE=10000
+export HISTSIZE=10000
