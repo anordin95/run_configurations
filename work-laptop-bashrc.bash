@@ -1,6 +1,50 @@
-################################################################################
-# ENVIRONMENT VARIABLES
-################################################################################
+source environment-variables.bash
+source aliases.bash
+
+# ==============================================================
+# Butterfly work-specifc initialization
+# ==============================================================
+
+alias kmy="k get pods,jobs -l user=anordin"
+alias kdmy="kubectl get jobs -l user=anordin --no-headers | cut -d ' ' -f1 | xargs -I _ kubectl delete job _"
+alias dl-deploy='cd /Users/anordin/src/software/host/Modules/BNI.DLTools'
+# Token authorization flow for access to Amazon Web Services ECR: Elastic Container Registry via the Docker CLI.
+# More details here: https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html
+alias ecr-login='docker login -u AWS -p $(aws ecr get-login-password) https://853813216061.dkr.ecr.us-east-1.amazonaws.com'
+
+export DL_HOME=~/src/dl-dev
+export EFS_DL_ROOT=/home/anordin/src
+export DL_NB_KERNEL_TIMEOUT_SECONDS=$((3600*6)) 
+export DL_NB_SERVER_TIMEOUT_SECONDS=$((3600*12))
+# Building a pylibmc, python library mem-cached, wheel requires
+# memcached C++ header files. Provide that information here.
+export LIBMEMCACHED="/opt/homebrew/Cellar/libmemcached/1.0.18_2/"
+
+aws_sso_login_if_necessary() {
+    # If the get-caller-identity call fails, the response goes to stderr, not stdout. So re-route stderr to stdout.
+    CALLER_IDENTITY_RESPONSE=$(aws sts get-caller-identity 2>&1)
+    echo Running! CALLER_IDENTITY_RESPONSE: ${CALLER_IDENTITY_RESPONSE}
+    if [[ 
+        # CALLER_IDENTITY_RESPONSE varies for reasons I don't know. 
+        # Handle both cases: 
+        "${CALLER_IDENTITY_RESPONSE}" == *"Error loading SSO Token"* ||
+        "${CALLER_IDENTITY_RESPONSE}" == *"expired"*
+    ]];
+    then
+        # The aws sso login call is unable to launch Chrome, but it can open a tab in 
+        # an already running Chrome application. 
+        open -a "Google Chrome.app"
+        aws sso login
+    fi
+}
+# Run in a sub-shell, quietly and in the background to minimize latency overhead of 
+# the call to aws. Also prevent noise from job output & thread control output. 
+(aws_sso_login_if_necessary 1>/dev/null 2>&1 & )
+
+# ==============================================================
+# Homebrew initialization
+# ==============================================================
+
 # Homebrew environment variables. Generated via $ /opt/homebrew/bin/brew shellenv
 export HOMEBREW_PREFIX="/opt/homebrew";
 export HOMEBREW_CELLAR="/opt/homebrew/Cellar";
@@ -9,119 +53,29 @@ export PATH="/opt/homebrew/bin:/opt/homebrew/sbin${PATH+:$PATH}";
 export MANPATH="/opt/homebrew/share/man${MANPATH+:$MANPATH}:";
 export INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
 
-# Postgres
+# ==============================================================
+# Postgres initialization
+# ==============================================================
+
 export PATH="$PATH:/opt/homebrew/opt/postgresql@15/bin"
 
-# Silence Zsh warning on Mac OSX
-export BASH_SILENCE_DEPRECATION_WARNING=1
-
-# Set the default command for viewing.
-# psql, for example, uses the PAGER variable.
-export PAGER='less --chop-long-lines -N'
-
-# Default to vim
-export EDITOR=vim
-
-# DL-Team Specific Commands
-export DL_HOME=~/src/dl-dev
-export EFS_DL_ROOT=/home/anordin/src
-export DL_NB_KERNEL_TIMEOUT_SECONDS=$((3600*6)) 
-export DL_NB_SERVER_TIMEOUT_SECONDS=$((3600*12))
-
-# Docker configuration.
-# export DOCKER_BUILDKIT=0
-# export COMPOSE_DOCKER_CLI_BUILD=0
-
-# For compilers to find openssl@1.1 you apparently need to set:
-# https://stackoverflow.com/questions/64353172/pyenv-build-failed-os-x-10-15-7-using-python-build-20180424
-export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
-
-# Building a pylibmc, python library mem-cached, wheel requires
-# memcached C++ header files. Provide that information here.
-export LIBMEMCACHED="/opt/homebrew/Cellar/libmemcached/1.0.18_2/"
-
-# Pyenv initialization. 
-# pyenv init - generates a series of bash commands which the 
-# eval command runs in the current shell.
-eval "$(pyenv init -)"
+# ==============================================================
+# pyenv initialization
+# ==============================================================
 
 # Prevent pyenv-virtualenv from modifying PS1 i.e. the bash prompt.
 export PYENV_VIRTUALENV_DISABLE_PROMPT=1
 
+# pyenv init - generates a series of bash commands which the 
+# eval command runs in the current shell.
+eval "$(pyenv init -)"
+
 # Pyenv-virtualenv initialization. 
-# Generated via $ pyenv-virtualenv-init - and manually placed here.
+# The if statement was added by me, not pyenv. It ensures pyenv-virtualenv is not loaded multiple times.
 if [[ ${PYENV_VIRTUALENV_INIT} -ne 1 ]]; 
 then
-    export PATH="/opt/homebrew/Cellar/pyenv-virtualenv/1.2.1/shims:${PATH}";
-    export PYENV_VIRTUALENV_INIT=1;
-
-    _pyenv_virtualenv_hook() {
-        # Store the last commands' return status in a local variable.
-        # A bash local variable is only visible within the function.
-        local ret=$?
-        
-        # -n: True if the length of the string is non-zero. 
-        # ${variable_name-}: the trailing "-" replaces an unset variable with 
-        #     whatever follows the "-" in this case nothing.
-        #     Note: an empty variable is distinct from an unset variable.
-        #     The - in this case prevents the code from failing if ${VIRTUAL_ENV}
-        #     is not set.
-        if [ -n "${VIRTUAL_ENV-}" ]; then
-            eval "$(pyenv sh-activate --quiet || pyenv sh-deactivate --quiet || true)" || true
-        else
-            eval "$(pyenv sh-activate --quiet || true)" || true
-        fi
-        return $ret
-    };
-
-    if ! [[ "${PROMPT_COMMAND-}" =~ _pyenv_virtualenv_hook ]]; then
-        PROMPT_COMMAND="_pyenv_virtualenv_hook;${PROMPT_COMMAND-}"
-    fi
+    $(pyenv-virtualenv-init -)
 fi
-
-################################################################################
-# ALIASES
-################################################################################
-# Git aliases
-alias gs='git status'
-alias gb='git branch'
-alias ga='git add'
-alias gc='git checkout'
-alias gbc='git checkout -q master && git for-each-ref refs/heads/ "--format=%(refname:short)" | while read branch; do mergeBase=$(git merge-base master $branch) && [[ $(git cherry master $(git commit-tree $(git rev-parse $branch\^{tree}) -p $mergeBase -m _)) == "-"* ]] && git branch -D $branch; done'
-
-# Common aliases
-alias pip="pip3"
-alias python="python3"
-alias path='echo ${PATH} | tr ":" "\n"'
-alias k='kubectl'
-alias ..='cd ..'
-alias p='python'
-alias sublime='/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl'
-alias s='sublime'
-alias ls='exa --long'
-alias lsc="exa --long --sort=changed --reverse"
-alias v="/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code"
-alias rm='rm -r'
-alias less='less --chop-long-lines -N'
-
-# --hidden: Search hidden files and directories. Otherwise, hidden files and directories are ignored.
-# --no-ignore: Don’t respect ignore files.
-# --ignore-case: Patterns are searched case insensitively.
-alias fd='fd --hidden --no-ignore --ignore-case'
-alias rg='rg --hidden --no-ignore --ignore-case'
-
-# Kube Aliases
-alias kmy="k get pods,jobs -l user=anordin"
-alias kdmy="kubectl get jobs -l user=anordin --no-headers | cut -d ' ' -f1 | xargs -I _ kubectl delete job _"
-
-# Token authorization flow for access to Amazon Web Services ECR: Elastic Container Registry via the Docker CLI.
-# More details here: https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html
-alias ecr-login='docker login -u AWS -p $(aws ecr get-login-password) https://853813216061.dkr.ecr.us-east-1.amazonaws.com'
-
-# DL-team aliases
-alias dl-deploy='cd /Users/anordin/src/software/host/Modules/BNI.DLTools'
-# alias sdk='cd /Users/anordin/src/software/host/Applications/ButterflySDKIOS'
 
 ################################################################################
 # ODDS & ENDS
@@ -154,27 +108,6 @@ test -f ~/.dotfiles/git-completion.bash && source $_
 
 # Increase limit of maximum open file handles
 ulimit -n 8192
-
-aws_sso_login_if_necessary() {
-    # If the get-caller-identity call fails, the response goes to stderr, not stdout. So re-route stderr to stdout.
-    CALLER_IDENTITY_RESPONSE=$(aws sts get-caller-identity 2>&1)
-    echo Running! CALLER_IDENTITY_RESPONSE: ${CALLER_IDENTITY_RESPONSE}
-    if [[ 
-        # CALLER_IDENTITY_RESPONSE varies for reasons I don't know. 
-        # Handle both cases: 
-        "${CALLER_IDENTITY_RESPONSE}" == *"Error loading SSO Token"* ||
-        "${CALLER_IDENTITY_RESPONSE}" == *"expired"*
-    ]];
-    then
-        # The aws sso login call is unable to launch Chrome, but it can open a tab in 
-        # an already running Chrome application. 
-        open -a "Google Chrome.app"
-        aws sso login
-    fi
-}
-# Run in a sub-shell, quietly and in the background to minimize latency overhead of 
-# the call to aws. Also prevent noise from job output & thread control output. 
-(aws_sso_login_if_necessary 1>/dev/null 2>&1 & )
 
 ################################################################################
 # PROMPT GENERATION
