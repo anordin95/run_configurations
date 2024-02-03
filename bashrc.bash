@@ -13,6 +13,7 @@ fi
 source environment-variables.bash
 source aliases.bash
 source generate-prompt.bash
+source functions.bash
 
 # Sections
 # 1. Butterfly work-specifc initialization
