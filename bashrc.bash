@@ -10,10 +10,10 @@ if [ -f ~/.dlrc ]; then
     source ~/.dlrc
 fi
 
-source environment-variables.bash
-source aliases.bash
-source generate-prompt.bash
-source functions.bash
+source /Users/anordin/src/run_configurations/environment-variables.bash
+source /Users/anordin/src/run_configurations/aliases.bash
+source /Users/anordin/src/run_configurations/generate-prompt.bash
+source /Users/anordin/src/run_configurations/functions.bash
 
 # Sections
 # 1. Butterfly work-specifc initialization
@@ -98,32 +98,6 @@ then
     eval "$(pyenv-virtualenv-init -)"
 fi
 
-################################################################################
-# ODDS & ENDS
-################################################################################
-# - Remove unused directories.
-# - Load Git tab-completion.
-# - Increase open file handles limit.
-# - Automatically authenticate to aws SSO.
-
-# Remove unused directories after ensuring they are nearly empty.
-# These directories are re-created on login by MacOS, so have to 
-# remove each time! Some of them are auto-populated with 
-# sub-directories, which is why check nearly empty 
-# rather than totally empty.
-# unused_directories=("${HOME}/Music" "${HOME}/Documents")
-# for unused_directory in ${unused_directories[@]}
-# do
-#     # in KB, since we use -k on the du command.
-#     ALMOST_EMPTY_THRESHOLD_KB=20
-#     # [[ -a ... ]] True if the file (or directory) exists.
-#     if [[ -a ${unused_directory} && $(du -sk ${unused_directory} | awk '{print $1}') -lt ${ALMOST_EMPTY_THRESHOLD_KB} ]]; then
-#         rm -rf ${unused_directory}
-#     fi
-# done
-
-# Increase limit of maximum open file handles
-ulimit -n 8192
 
 
 

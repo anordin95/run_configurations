@@ -10,6 +10,7 @@ alias path='echo ${PATH} | tr ":" "\n"'
 alias k='kubectl'
 alias p='python'
 alias ls='exa --long'
+alias clang++='clang++ --std=c++17'
 # lu(pdated) - show most recently updated first.
 alias lu="exa --long --sort=changed --reverse"
 alias v="/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code"
@@ -20,3 +21,6 @@ alias less='less --chop-long-lines -N'
 # --ignore-case: Search patterns case insensitively.
 alias fd='fd --hidden --no-ignore --ignore-case'
 alias rg='rg --hidden --no-ignore --ignore-case'
+
+# MacOS requires sudo permissions to view processes that don't belong to the current user.
+alias procs='sudo procs'

@@ -11,3 +11,6 @@ export EDITOR=vim
 # Bash defaults to storing the most recent 500 commands. Increase that.
 export HISTFILESIZE=10000
 export HISTSIZE=10000
+
+# Significantly increase the maximum number of open file descriptors.
+ulimit -n 2148
