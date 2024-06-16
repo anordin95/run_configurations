@@ -5,7 +5,6 @@ alias ga='git add'
 
 # Common aliases
 alias pip="pip3"
-alias python="python3"
 alias path='echo ${PATH} | tr ":" "\n"'
 alias k='kubectl'
 alias p='python'

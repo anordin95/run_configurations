@@ -78,7 +78,10 @@ export INFOPATH="/opt/homebrew/share/info:${INFOPATH:-}";
 # Postgres initialization
 # ==============================================================
 
-export PATH="$PATH:/opt/homebrew/opt/postgresql@15/bin"
+export PATH="$PATH:/opt/homebrew/opt/postgresql@16/bin"
+# Path to the data-directory for postgres to read/write/use in the course of 
+# performing database operations. For example, tables are read/stored/written here.
+export PGDATA="/opt/homebrew/var/postgresql@16/"
 
 # ==============================================================
 # pyenv initialization
